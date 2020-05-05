@@ -98,12 +98,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  A clear and well-documented \LaTeX\ document is presented as an
-  article formatted for publication by ACM in a conference proceedings
-  or journal publication. Based on the ``acmart'' document class, this
-  article presents and explains many of the common variations, as well
-  as many of the formatting elements an author may use in the
-  preparation of the documentation of their work.
+  Numerical simulation of systems governed by partial differential equations ultimately leads to solving massive systems of linear equations. We present a parallel conjugate gradient solver which employs a memory efficient \emph{Compressed Row Storage} data-structure. Two versions of the solver, a CPU only (MPI) and CPU-GPU (CUDA) are developed and compared in this study. The CPU only version of the solver exhibits speedup with increase in number of processors. The CPU-GPU solver although is faster, doesn't show any scaling which needs further investigation. But overall, we are able to demonstrate the effectiveness of parallel conjugate gradient solver which is a key to faster simulations.
 \end{abstract}
 
 \acmConference[Project]{}{Parallel Computing}{Spring '20}%
@@ -112,7 +107,7 @@
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{datasets, neural networks, gaze detection, text tagging}
+\keywords{parallel linear solver, conjugate gradient, MPI programming, MPI I/O, CUDA programming, CUDA reduction, CUDA-MPI }
 
 %%
 %% This command processes the author and affiliation and title
@@ -583,17 +578,16 @@ The solution to given linear system i.e. the result vector is also stored in eac
 
 
 \section{Performance Analysis}
-The performance of parallel conjugate gradient solver is tested on \emph{AiMOS} for different systems with varying sizes. We tested two versions of the solver, the CPU only version and hybrid CPU/GPU version. Both strong and weak scaling analysis are conducted. These test results are discussed in this section. 
+The performance of parallel conjugate gradient solver is tested on \emph{AiMOS} supercomputer for different systems with varying sizes. We tested two versions of the solver, the CPU only version and hybrid CPU-GPU version. Both strong and weak scaling analysis are conducted. These test results are discussed in this section. 
 \subsection{Problem Definition}
 Numerical analysis of steady 1D heat equation is considered for the performance analysis of the parallel conjugate gradient solver. Steady state heat equation in 1D is given as:
 \begin{equation}\label{heat}
-\kappa\frac{\partial^2 T}{\partial x^2}= f(x)
+-\kappa\frac{\partial^2 T}{\partial x^2}= f(x)
 \end{equation}
-Here, $T$ is the temperature, $\kappa$ is thermal conductivity and $f(x)$ is the source term. Numerical analysis of Eq. \eqref{heat} involves discretizing the domain into small segments and solving the equation using finite difference technique. This ultimately leads to solving a system of linear equations. The coefficient matrix obtained here is a sparse matrix with tri-diagonal banded structure. Bases on number of discretized segments, systems with varying sizes are obtained for performance analysis. 
+Here, $T$ is the temperature, $\kappa$ is thermal conductivity and $f(x)$ is the source term. Numerical analysis of Eq. \eqref{heat} involves discretizing the domain into small segments and solving the equation using finite difference technique. This ultimately leads to solving a system of linear equations. The coefficient matrix obtained here is a sparse matrix with tri-diagonal banded structure. Based on number of discretized segments, systems with varying sizes are obtained for performance analysis. 
 
 \subsection{MPI Performance}\label{mpi_perfrom}
-In this subsection performance analysis of MPI only version of the solver is discusses. Strong scaling study is conducted on 7 different systems of size $1K\times 1K$, $2.5K\times 2.5K$, $5K\times 5K$, $10K\times 10K$, $20K\times 20K$, $50K\times 50K$ and $100K\times 100K$. The number of MPI ranks is varied from 1-6 and 12. Plots for run-time analysis of strong scaling study are displayed in Fig. \ref{strong1}
-
+In this subsection performance analysis of MPI only version of the solver is discusses. Strong scaling study is conducted on 7 different systems of size $1K\times 1K$, $2.5K\times 2.5K$, $5K\times 5K$, $10K\times 10K$, $20K\times 20K$, $50K\times 50K$ and $100K\times 100K$. The number of MPI ranks is varied from 1-6 and 12. 
 \begin{figure*}
 	\begin{subfigure}{0.4\textwidth}
 		\includegraphics[trim= 20 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/MPI_strong_1k.png} 
@@ -623,7 +617,7 @@ In this subsection performance analysis of MPI only version of the solver is dis
 		\includegraphics[trim= 20 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/MPI_strong_100k.png}
 		\caption{}
 	\end{subfigure}
-	\caption{MPI only strong scaling analysis.}
+	\caption{Strong scaling MPI only solver}
 	\label{strong1}
 \end{figure*}
 
@@ -631,13 +625,13 @@ In this subsection performance analysis of MPI only version of the solver is dis
 	\begin{center}
 		\includegraphics[width=0.35\textwidth]{plots/MPI_strong_allranks_log.png}
 	\end{center}
-	\caption{Run-time vs. no. of ranks for all cases}
+	\caption{Strong Scaling MPI only solver: run-time vs. no. of ranks for all sizes}
 	\label{strong2}      
 \end{figure}
 
-In Fig. \ref{strong2}, run-time analysis for all the cases is displayed. It can be observed that for size $1K\times 1K$, $2.5K\time 2.5K$ and $5K\times 5K$, there is a nominal speedup by using 2 ranks. But as we increase the ranks from 2 the run-time is increasing. For the larger systems we can observe the speedup with increase in number of ranks from 1-6. But for 12 ranks all the systems show different degrees of slowdown. 
+Plots for run-time analysis of strong scaling study are displayed in Fig. \ref{strong1}. In Fig. \ref{strong2}, run-time analysis for all the cases is displayed. It can be observed that for size $1K\times 1K$, $2.5K\time 2.5K$ and $5K\times 5K$, there is a nominal speedup by using 2 ranks. But as we increase the ranks from 2 the run-time is increasing. For the larger systems we can observe the speedup with increase in number of ranks from 1-6. But for 12 ranks all the systems show different degrees of slowdown. 
 
-To get better understanding of these results, we did performance analysis of the solver using an application \emph{GProf}. The results for system of size $50K\times 50K$ are shown in Table \ref{tab:gprof1}, \ref{tab:gprof2}, \ref{tab:gprof3}. The operations which take maximum time are matrix-vector multiplication, vector-vector addition and vector-vector dot product. As we increase the ranks from 1-2 and eventually to 12, the speedup in all three operations can be observed. But all the ranks need synchronization before moving to the next iteration. If each rank handles relatively small number of rows, the idle time will increase because of synchronization. Hence using more than 2 ranks in only justified for large systems. 
+To get better understanding of these results, we did performance analysis of the solver using an application \texttt{gprof}. The results for system of size $50K\times 50K$ for 1, 2 and 12 ranks are shown in Table \ref{tab:gprof1}, \ref{tab:gprof2}, \ref{tab:gprof3} respectively. The operations which take maximum time are matrix-vector multiplication, vector-vector addition and vector-vector dot product. As we increase the ranks from 1-2 and eventually to 12, the speedup in all three operations can be observed. But all the ranks need synchronization before moving to the next iteration. If each rank handles relatively small number of rows, the idle time will increase because of synchronization. Hence using more than 2 ranks in only justified for large systems. 
 
 \begin{table}[H]
 	\scriptsize
@@ -677,8 +671,7 @@ To get better understanding of these results, we did performance analysis of the
 		25.80                                                                   & 17.14                                                                            & 4.47                                                                       & 150015                                                                    & vector\_dot\_product\_onrank \\ \hline   
 	\end{tabular}
 \end{table}
-
-The weak scaling study analyzes speedup with number of processors for fixed problem size per processor. This type of study is not possible on our solver as it would lead to an invalid system of equation. Run-time analysis vs. size of the problem for different number of ranks is displayed in Fig. \ref{weak}.
+The weak scaling study analyzes speedup with number of processors for fixed problem size per processor. This type of study is not possible on our solver as it would lead to an invalid system (number of rows and columns different) of equation. Here, weak scaling is run-time analysis vs. size of the problem by keeping number of processors constant. There results for different number of ranks are displayed in Fig. \ref{weak}.
 
 \begin{figure}
 	\begin{subfigure}{0.3\textwidth}
@@ -689,14 +682,14 @@ The weak scaling study analyzes speedup with number of processors for fixed prob
 		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/MPI_weak_allrank_loglog.png}
 		\caption{Log time scale}
 	\end{subfigure}
-	\caption{Run-time vs. problem size for all ranks}
+	\caption{Weak scaling MPI only solver: run-time vs. problem size for all ranks}
 	\label{weak}
 \end{figure}
 
-\noindent Weak scaling results from Fig. \ref{weak} show a greater \% increase in the speedup with increase in number of ranks for larger systems. 
+Weak scaling results from Fig. \ref{weak} show a greater \% increase in the speedup with increase in number of ranks for larger systems. 
 
-\subsection{MPI/CUDA Performance}
-Similar test cases as Section \ref{mpi_perfrom} are used to analyze the performance of the hybrid MPI/CUDA version of the solver. The results for both versions are also compared in this section. As explained in the Section \ref{cuda_dot}, we are employing a CUDA reduction technique for vector-dot product. We first analyze the performance gain obtained by using the reduction technique. 
+\subsection{MPI-CUDA Performance}
+Similar test cases as Section \ref{mpi_perfrom} are used to analyze the performance of the hybrid MPI-CUDA version of the solver. The results for both versions are also compared in this section. As explained in the Section \ref{cuda_dot}, we are employing a CUDA reduction technique for vector-dot product. We first analyze the performance gain obtained by using the reduction technique. 
 
 \begin{figure}
 	\begin{subfigure}{0.3\textwidth}
@@ -710,15 +703,15 @@ Similar test cases as Section \ref{mpi_perfrom} are used to analyze the performa
 	\caption{Run-time comparison after applying reduction technique}
 	\label{compare}
 \end{figure}
-Fig. \ref{compare} illustrates that the run-time significantly decreases after applying CUDA reduction technique for vector-dot product. All the subsequent MPI/CUDA results presented are with the reduction technique. 
+Fig. \ref{compare} illustrates that the run-time significantly decreases after applying CUDA reduction technique for vector-dot product. All the subsequent MPI-CUDA results presented are with the reduction technique. 
 
-Strong scaling studies for different systems are done on the hybrid solver. The run-time analysis vs. number of GPUs for all systems is presented in Fig. \ref{cuda-strong}. Also we compare theses results with the MPI only solver's performance. The comparison for   
+Strong scaling studies for different systems are done on the hybrid solver. The run-time analysis vs. number of GPUs for all systems is presented in Fig. \ref{cuda-strong}. Also we compare theses results with the MPI only solver's performance. These comparison for system size $50K\times50K$ and $100K\times 100K$ are shown in Fig. \ref{compare_strong}.
 
 \begin{figure}[h!]
 	\begin{center}
 		\includegraphics[width=0.35\textwidth]{plots/CUDA_strong_allranks_log.png}
 	\end{center}
-	\caption{Run-time vs. no. of GPUs for all cases}
+	\caption{Strong scaling MPI-CUDA solver: runt-time vs. no. of GPUs for all sizes}
 	\label{cuda-strong}      
 \end{figure}
 
@@ -731,12 +724,12 @@ Strong scaling studies for different systems are done on the hybrid solver. The 
 		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/compare_strong_100k.png}
 		\caption{}
 	\end{subfigure}
-	\caption{Run-time comparison after applying reduction technique}
+	\caption{Strong scaling: MPI-CUDA vs. MPI only comparison}
 	\label{compare_strong}
 \end{figure}
 
+Fig. \ref{compare_strong} clearly illustrates that for small number of ranks, the MPI-CUDA solver is much faster than MPI only solver. But the MPI-CUDA solver doesn't exhibit any scaling. On the contrary run-time increases with number of GPUs. We conducted performance analysis on a $20K\times 20K$ using application \texttt{nvprof}. The performance analysis results for GPUs 1,2 and 6 are presented in Tables \ref{tab:nvprof1}, \ref{tab:nvprof2} and \ref{tab:nvprof3} respectively.  
 
-\subsection{Profiling}
 \begin{table}[H]
 	\scriptsize
 	\caption{Profiling for 20k system size with 1 GPU}
@@ -787,17 +780,56 @@ Strong scaling studies for different systems are done on the hybrid solver. The 
 	\end{tabular}
 \end{table}
 
-\section{Citations and Bibliographies}
+For the serial execution (Table \ref{tab:nvprof1}) of MPI-CUDA solver, matrix-vector multiplication only takes 9\% of the run-time. But for more than 1 GPU it is the most expensive operation. This indicates that computing resources are wasted on the synchronization causing parallel operations be more expensive. Further is needed to understand the cause for bad scaling performance of the hybrid solver.
 
+We also performed weak scaling analysis keeping number of GPUs constant while changing the problem size. These analysis for different ranks is illustrated in Fig. \ref{cuda-weak}. The comparison of weak scaling between MPI-CUDA solver and MPI only solver for ranks 1, 2, 4 and 6 is presented in the Fig. \ref{compare_weak}.
+
+\begin{figure}[h!]
+	\begin{center}
+		\includegraphics[width=0.35\textwidth]{plots/CUDA_weak_allrank.png}
+	\end{center}
+	\caption{Weak Scaling MPI-CUDA solver: run-time vs. problem size for all ranks}
+	\label{cuda-weak}      
+\end{figure}
+
+\begin{figure}
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/compare_weak_rank1.png} 
+		\caption{}
+	\end{subfigure}
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/compare_weak_rank2.png}
+		\caption{}
+	\end{subfigure}
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/compare_weak_rank4.png} 
+		\caption{}
+	\end{subfigure}
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[trim= 10 5 35 10,clip, width=0.95\linewidth, height=5cm]{plots/compare_weak_rank6.png}
+		\caption{}
+	\end{subfigure}
+	\caption{Weak scaling: MPI-CUDA vs. MPI only comparison}
+	\label{compare_weak}
+\end{figure}
+
+It can be observed in Fig. \ref{compare_weak} that for small number of ranks MPI-CUDA solver is much faster than MPI only solver. But as we increase number of rank MPI only solver is faster due to inefficient scaling of MPI-CUDA solver. 
+
+We have separately tested MPI only solver and MPI-CUDA solver on different problems. In summary, the MPI solver shows good scaling for larger problems only. For smaller systems, run-time is increasing with processors due to time consumed in synchronization. Overall, MPI-CUDA solver performs better than MPI only solver for small number of ranks. But it doesn't exhibit any scaling with more processors which needs further investigation. 
+
+\section{Summary}
+In the scope of this project we have developed a parallel solver for solving large systems of linear equation. The solver is based on conjugate gradient algorithm. A compresses row storage data-structure is used to store large sparse matrices efficiently. 
+
+Two versions of the parallel solver are developed, a CPU only version using MPI and a hybrid CPU-GPU version using CUDA. Matrix vector multiplication and vector-vector dot product are the most critical operations in conjugate gradient algorithm. These operations can be performed in parallel by distributing the coefficient matrix row wise across different processors. Operations like MPI broadcast are used to communicate the results between different processors. We also use MPI I/O to read partitioned input files and distribute the data across processors. The ability to write different block of solutions form different processors to a single file or multiple files is also demonstrated. 
+
+The performances of both MPI-only solver and MPI-CUDA solver are tested with systems of sizes $1K\times 1K$, $2.5K\times 2.5K$, $5K\times 5K$, $10K\times 10K$, $20K\times 20K$, $50K\times 50K$ and $100K\times 100K$. The number of processors is varied from 1-6 and 12. The MPI-only solver shows speedup with increase in number of processors for  large systems only(size > 5K). The MPI-CUDA solver shows speedup associated with use of GPUs. But it doesn't show scaling as we increase number of processors. 
+
+Performance analysis applications like \texttt{nvprof} and \texttt{gprof} are used to get insights about the behaviour of solvers. We found that with parallelization, all the operations are faster but significant amount of time is consumed by synchronization and communication between processors. This cost is only justified for larger systems.The performance of MPI-CUDA solver can be improved by employing efficient reduction technique. It needs more investigation to find reasons for its poor scaling behaviour. but we are able to demonstrate the effectiveness of a parallel conjugate gradient solver to solve large systems of linear equations.
 
 %% The next two lines define the bibliography style to be used, and
 %% the bibliography file.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{acmart}
-
-%%
-%% If your work has an appendix, this is the place to put it.
-\appendix
 
 
 \end{document}
